@@ -2,7 +2,7 @@
 
 Name:             pipewire
 Version:          0.2.2
-Release:          2
+Release:          4
 Summary:          Multimedia processing graphs
 License:          LGPLv2+
 URL:              https://pipewire.org/
@@ -80,5 +80,17 @@ exit 0
 %{_datadir}/doc/pipewire/html/*
 
 %changelog
+* Sat Nov 23 2019 openEuler Buildteam <buildteam@openeuler.org> - 0.2.2-4
+- Type:bugfix
+- Id:NA
+- SUG:NA
+- DESC:change build requires of v4l-utils-deve to libv4l-devel
+
+* Thu Nov 14 2019 shenyangyang<shenyangyang4@huawei.com> - 0.2.2-3
+- Type:enhancement
+- ID:NA
+- SUG:NA
+- DESC:change build requires of libv4l-devel to v4l-utils-devel
+
 * Thu Aug 29 2018 openEuler Buildteam <buildteam@openeuler.org> - 0.2.2-2
 - Package init
