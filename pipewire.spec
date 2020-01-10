@@ -1,22 +1,25 @@
 %global apiversion   0.2
+%global spaversion   0.1
+%global systemd      1
+%global multilib_archs x86_64
 
-Name:             pipewire
-Version:          0.2.2
-Release:          4
-Summary:          Multimedia processing graphs
-License:          LGPLv2+
-URL:              https://pipewire.org/
-Source0:          https://github.com/PipeWire/pipewire/archive/%{version}/%{name}-%{version}.tar.gz
+Name:           pipewire
+Version:        0.2.7
+Release:        1
+Summary:        Multimedia processing graphs
+License:        LGPLv2+
+URL:            https://pipewire.org/
+Source0:        https://github.com/PipeWire/pipewire/archive/%{version}/%{name}-%{version}.tar.gz
 
+BuildRequires:  meson gcc pkgconf-pkg-config dbus-devel glib2-devel
+BuildRequires:  gstreamer1-devel gstreamer1-plugins-base-devel systemd-devel
+BuildRequires:  alsa-lib-devel libv4l-devel doxygen xmltoman graphviz sbc-devel
 
-BuildRequires:    meson gcc pkgconf-pkg-config dbus-devel glib2-devel gstreamer1-devel gstreamer1-plugins-base-devel
-BuildRequires:    systemd-devel alsa-lib-devel libv4l-devel doxygen xmltoman graphviz sbc-devel git 
+Requires(pre):  shadow-utils
+Requires:       systemd >= 184 rtkit
 
-Requires(pre):    shadow-utils
-Requires:         systemd >= 184 rtkit
-
-Provides:         %{name}-libs  %{name}-utils
-Obsoletes:        %{name}-libs  %{name}-utils
+Provides:       %{name}-libs  %{name}-utils
+Obsoletes:      %{name}-libs  %{name}-utils
 
 %description
 %{name} is a server and user space API to deal with multimedia
@@ -34,14 +37,17 @@ header files that can communicate with a %{name} media server.
 %package_help
 
 %prep
-%autosetup -T -b0 -n %{name}-%{version} -p1 -S git
+%autosetup -T -b0 -n %{name}-%{version} -p1
 
 %build
-%meson -D enable_docs=true -D enable_man=true -D enable_gstreamer=true
+%meson -D docs=true -D man=true -D gstreamer=enabled -D systemd=true
 %meson_build
 
 %install
 %meson_install
+
+mkdir %{buildroot}%{_userunitdir}/sockets.target.wants
+ln -s ../pipewire.socket %{buildroot}%{_userunitdir}/sockets.target.wants/pipewire.socket
 
 %check
 %meson_test
@@ -49,7 +55,7 @@ header files that can communicate with a %{name} media server.
 %pre
 getent group pipewire >/dev/null || groupadd -r pipewire
 getent passwd pipewire >/dev/null || \
-    useradd -r -g pipewire -d /var/run/pipewire -s /sbin/nologin -c "PipeWire System Daemon" pipewire
+    useradd -r -g pipewire -d %{_localstatedir}/run/pipewire -s /sbin/nologin -c "PipeWire System Daemon" pipewire
 exit 0
 
 %ldconfig_scriptlets
@@ -57,29 +63,35 @@ exit 0
 %files
 %defattr(-,root,root)
 %license LICENSE GPL LGPL
-%{_libdir}/pipewire-%{apiversion}/*
-%{_libdir}/libpipewire-%{apiversion}.so*
-%{_libdir}/libspa-lib.so*
-%{_libdir}/gstreamer-1.0/libgstpipewire.*
 %{_libdir}/spa/*
+%{_libdir}/pipewire-%{apiversion}/*
+%{_libdir}/libpipewire-%{apiversion}.so.*
+%{_libdir}/gstreamer-1.0/libgstpipewire.*
 %{_bindir}/pipewire*
 %{_bindir}/spa-*
 %{_userunitdir}/pipewire.*
+%{_userunitdir}/sockets.target.wants/pipewire.socket
+%dir %{_sysconfdir}/pipewire/
 %{_sysconfdir}/pipewire/*
 
 %files devel
 %defattr(-,root,root)
 %{_includedir}/pipewire/*
 %{_includedir}/spa/*
-%{_libdir}/pkgconfig/*
+%{_libdir}/libpipewire-%{apiversion}.so
+%{_libdir}/pkgconfig/*.pc
 
 %files help
 %defattr(-,root,root)
 %doc README
 %{_mandir}/man1/*
+%{_mandir}/man5/*
 %{_datadir}/doc/pipewire/html/*
 
 %changelog
+* Thu Jan 9 2020 openEuler Buildteam <buildteam@openeuler.org> - 0.2.7-1
+- update to 0.2.7
+
 * Sat Nov 23 2019 openEuler Buildteam <buildteam@openeuler.org> - 0.2.2-4
 - Type:bugfix
 - Id:NA
