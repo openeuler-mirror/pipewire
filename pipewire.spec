@@ -1,25 +1,28 @@
-%global apiversion   0.2
-%global spaversion   0.1
+%global apiversion   0.3
+%global spaversion   0.2
 %global systemd      1
 %global multilib_archs x86_64
 
 Name:           pipewire
-Version:        0.2.7
+Version:        0.3.15
 Release:        1
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
-Source0:        https://github.com/PipeWire/pipewire/archive/%{version}/%{name}-%{version}.tar.gz
+Source0:        https://github.com/pipewire/pipewire/archive/%{version}/%{name}-%{version}.tar.gz
 
-BuildRequires:  meson gcc pkgconf-pkg-config dbus-devel glib2-devel
-BuildRequires:  gstreamer1-devel gstreamer1-plugins-base-devel systemd-devel
-BuildRequires:  alsa-lib-devel libv4l-devel doxygen xmltoman graphviz sbc-devel
+Patch0:         0001-protocol-native-do-version-check-on-HELLO.patch
+
+BuildRequires:  meson gcc pkgconf-pkg-config libudev-devel dbus-devel glib2-devel gstreamer-devel
+BuildRequires:  gstreamer1-devel gstreamer1-plugins-base-devel systemd-devel vulkan-loader-devel
+BuildRequires:  alsa-lib-devel libv4l-devel doxygen xmltoman graphviz sbc-devel libsndfile-devel
+BuildRequires:  bluez-devel SDL2-devel jack-audio-connection-kit-devel
 
 Requires(pre):  shadow-utils
 Requires:       systemd >= 184 rtkit
 
 Provides:       %{name}-libs  %{name}-utils
-Obsoletes:      %{name}-libs  %{name}-utils
+Obsoletes:      %{name}-libs < %{version}-%{release} %{name}-utils < %{version}-%{release}
 
 %description
 %{name} is a server and user space API to deal with multimedia
@@ -40,7 +43,7 @@ header files that can communicate with a %{name} media server.
 %autosetup -T -b0 -n %{name}-%{version} -p1
 
 %build
-%meson -D docs=true -D man=true -D gstreamer=enabled -D systemd=true
+%meson -D docs=true -D man=true -D gstreamer=true -D systemd=true
 %meson_build
 
 %install
@@ -48,6 +51,16 @@ header files that can communicate with a %{name} media server.
 
 mkdir %{buildroot}%{_userunitdir}/sockets.target.wants
 ln -s ../pipewire.socket %{buildroot}%{_userunitdir}/sockets.target.wants/pipewire.socket
+
+mkdir -p %{buildroot}%{_sysconfdir}/alsa/conf.d/
+cp %{buildroot}%{_datadir}/alsa/alsa.conf.d/50-pipewire.conf \
+        %{buildroot}%{_sysconfdir}/alsa/conf.d/50-pipewire.conf
+cp %{buildroot}%{_datadir}/alsa/alsa.conf.d/99-pipewire-default.conf \
+        %{buildroot}%{_sysconfdir}/alsa/conf.d/99-pipewire-default.conf
+
+mkdir -p %{buildroot}%{_prefix}/lib/udev/rules.d
+mv -fv %{buildroot}/lib/udev/rules.d/90-pipewire-alsa.rules %{buildroot}%{_prefix}/lib/udev/rules.d
+
 
 %check
 %meson_test
@@ -62,33 +75,47 @@ exit 0
 
 %files
 %defattr(-,root,root)
-%license LICENSE GPL LGPL
-%{_libdir}/spa/*
+%license LICENSE COPYING
+%{_libdir}/spa-0.2/*
 %{_libdir}/pipewire-%{apiversion}/*
 %{_libdir}/libpipewire-%{apiversion}.so.*
 %{_libdir}/gstreamer-1.0/libgstpipewire.*
+%{_libdir}/alsa-lib/libasound_module_*
 %{_bindir}/pipewire*
+%{_bindir}/pw-*
 %{_bindir}/spa-*
 %{_userunitdir}/pipewire.*
 %{_userunitdir}/sockets.target.wants/pipewire.socket
 %dir %{_sysconfdir}/pipewire/
 %{_sysconfdir}/pipewire/*
+%{_datadir}/alsa/alsa.conf.d/50-pipewire.conf
+%{_datadir}/alsa/alsa.conf.d/99-pipewire-default.conf
+%config(noreplace) %{_sysconfdir}/alsa/conf.d/50-pipewire.conf
+%config(noreplace) %{_sysconfdir}/alsa/conf.d/99-pipewire-default.conf
+%{_prefix}/lib/udev/rules.d/90-pipewire-alsa.rules
 
 %files devel
 %defattr(-,root,root)
-%{_includedir}/pipewire/*
-%{_includedir}/spa/*
+%{_includedir}/pipewire-%{apiversion}/*
+%{_includedir}/spa-%{spaversion}/*
 %{_libdir}/libpipewire-%{apiversion}.so
 %{_libdir}/pkgconfig/*.pc
 
 %files help
 %defattr(-,root,root)
-%doc README
+%doc README.md
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %{_datadir}/doc/pipewire/html/*
+%{_datadir}/alsa-card-profile/*
 
 %changelog
+* Mon May 31 2021 weijin deng <weijin.deng@turbolinux.com.cn> - 0.3.15-1
+- Upgrade to 0.3.15
+- Update Version, Source0, BuildRequires, Obsoletes
+- Update stage 'build', 'install' and 'files'
+- Correct uncorrect date, add one patch
+
 * Thu Jan 9 2020 openEuler Buildteam <buildteam@openeuler.org> - 0.2.7-1
 - update to 0.2.7
 
@@ -104,5 +131,5 @@ exit 0
 - SUG:NA
 - DESC:change build requires of libv4l-devel to v4l-utils-devel
 
-* Thu Aug 29 2018 openEuler Buildteam <buildteam@openeuler.org> - 0.2.2-2
+* Wed Aug 29 2018 openEuler Buildteam <buildteam@openeuler.org> - 0.2.2-2
 - Package init
