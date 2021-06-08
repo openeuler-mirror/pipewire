@@ -5,7 +5,7 @@
 
 Name:           pipewire
 Version:        0.3.15
-Release:        1
+Release:        2
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
@@ -43,7 +43,8 @@ header files that can communicate with a %{name} media server.
 %autosetup -T -b0 -n %{name}-%{version} -p1
 
 %build
-%meson -D docs=true -D man=true -D gstreamer=true -D systemd=true
+%meson -D docs=true -D man=true -D gstreamer=true -D systemd=true \
+	-D pipewire-pulseaudio=false
 %meson_build
 
 %install
@@ -110,6 +111,9 @@ exit 0
 %{_datadir}/alsa-card-profile/*
 
 %changelog
+* Mon May 31 2021 weijin deng <weijin.deng@turbolinux.com.cn> - 0.3.15-2
+- Update stage 'build', add disable configuration to pipewire-pulseaudio
+
 * Mon May 31 2021 weijin deng <weijin.deng@turbolinux.com.cn> - 0.3.15-1
 - Upgrade to 0.3.15
 - Update Version, Source0, BuildRequires, Obsoletes
