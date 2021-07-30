@@ -2,10 +2,11 @@
 %global spaversion   0.2
 %global systemd      1
 %global multilib_archs x86_64
+%global enable_vulkan 1
 
 Name:           pipewire
 Version:        0.3.15
-Release:        2
+Release:        3
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
@@ -27,6 +28,16 @@ Obsoletes:      %{name}-libs < %{version}-%{release} %{name}-utils < %{version}-
 %description
 %{name} is a server and user space API to deal with multimedia
 pipelines,contains command line utilities. 
+	
+%package libs
+Summary:        Libraries for PipeWire clients
+License:        MIT
+Recommends:     %{name}%{?_isa} = %{version}-%{release}
+Obsoletes:      %{name}-libpulse < %{version}-%{release}
+
+%description libs
+This package contains the runtime libraries for any application that wishes
+to interface with a PipeWire media server.
 
 %package          devel
 Summary:          includes development files for %{name} client development
@@ -77,14 +88,13 @@ exit 0
 %files
 %defattr(-,root,root)
 %license LICENSE COPYING
-%{_libdir}/spa-0.2/*
-%{_libdir}/pipewire-%{apiversion}/*
-%{_libdir}/libpipewire-%{apiversion}.so.*
 %{_libdir}/gstreamer-1.0/libgstpipewire.*
 %{_libdir}/alsa-lib/libasound_module_*
 %{_bindir}/pipewire*
 %{_bindir}/pw-*
 %{_bindir}/spa-*
+%{_libdir}/pipewire-%{apiversion}/jack/
+%{_libdir}/spa-%{spaversion}/jack/
 %{_userunitdir}/pipewire.*
 %{_userunitdir}/sockets.target.wants/pipewire.socket
 %dir %{_sysconfdir}/pipewire/
@@ -93,7 +103,31 @@ exit 0
 %{_datadir}/alsa/alsa.conf.d/99-pipewire-default.conf
 %config(noreplace) %{_sysconfdir}/alsa/conf.d/50-pipewire.conf
 %config(noreplace) %{_sysconfdir}/alsa/conf.d/99-pipewire-default.conf
+
+
+%files libs
+%defattr(-,root,root)	
+%license LICENSE COPYING
+%{_libdir}/libpipewire-%{apiversion}.so.*
+%{_libdir}/pipewire-%{apiversion}/libpipewire-*.so
+%dir %{_datadir}/alsa-card-profile/
+%dir %{_datadir}/alsa-card-profile/mixer/
+%{_datadir}/alsa-card-profile/mixer/paths/
+%{_datadir}/alsa-card-profile/mixer/profile-sets/
 %{_prefix}/lib/udev/rules.d/90-pipewire-alsa.rules
+%dir %{_libdir}/spa-%{spaversion}
+%{_libdir}/spa-%{spaversion}/alsa/
+%{_libdir}/spa-%{spaversion}/audioconvert/
+%{_libdir}/spa-%{spaversion}/audiomixer/
+%{_libdir}/spa-%{spaversion}/bluez5/
+%{_libdir}/spa-%{spaversion}/control/
+%{_libdir}/spa-%{spaversion}/support/
+%{_libdir}/spa-%{spaversion}/v4l2/
+%{_libdir}/spa-%{spaversion}/videoconvert/	
+%if 0%{?enable_vulkan}
+%{_libdir}/spa-%{spaversion}/vulkan/
+%endif
+
 
 %files devel
 %defattr(-,root,root)
@@ -108,9 +142,12 @@ exit 0
 %{_mandir}/man1/*
 %{_mandir}/man5/*
 %{_datadir}/doc/pipewire/html/*
-%{_datadir}/alsa-card-profile/*
+
 
 %changelog
+* Thu Jul 29 2021 wangkerong <wangkerong@huawei.com> - 0.3.15-3
+- add lib package
+
 * Mon May 31 2021 weijin deng <weijin.deng@turbolinux.com.cn> - 0.3.15-2
 - Update stage 'build', add disable configuration to pipewire-pulseaudio
 
