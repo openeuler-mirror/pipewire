@@ -1,12 +1,21 @@
 %global apiversion   0.3
 %global spaversion   0.2
 %global systemd      1
+%global minorversion 3
+%global microversion 15
+%global soversion    0
 %global multilib_archs x86_64
+%global libversion   %{soversion}.%(bash -c '((intversion = (%{minorversion} * 100) + %{microversion})); echo ${intversion}').0
+%global enable_alsa 1
+%if 0%{?openEuler}	
+%global enable_jack   1
+%global enable_pulse  1
 %global enable_vulkan 1
+%endif
 
 Name:           pipewire
 Version:        0.3.15
-Release:        3
+Release:        4
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
@@ -39,6 +48,80 @@ Obsoletes:      %{name}-libpulse < %{version}-%{release}
 This package contains the runtime libraries for any application that wishes
 to interface with a PipeWire media server.
 
+%package gstreamer
+Summary:        GStreamer elements for PipeWire
+License:        MIT
+Recommends:     %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
+ 
+%description gstreamer
+This package contains GStreamer elements to interface with a
+PipeWire media server.
+
+%package utils
+Summary:        PipeWire media server utilities
+License:        MIT
+Requires:       %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
+ 
+%description utils
+This package contains command line utilities for the PipeWire media server.
+	
+%if 0%{?enable_alsa}
+%package alsa
+Summary:        PipeWire media server ALSA support
+License:        MIT
+Recommends:     %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
+ 
+%description alsa
+This package contains an ALSA plugin for the PipeWire media server.
+%endif
+
+%if 0%{?enable_jack}
+%package libjack
+Summary:        PipeWire libjack library
+License:        MIT
+Recommends:     %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
+BuildRequires:  jack-audio-connection-kit-devel >= 1.9.10
+Conflicts:      jack-audio-connection-kit
+Conflicts:      jack-audio-connection-kit-dbus
+Obsoletes:      pipewire-jack < 0.2.96-2
+Conflicts:      %{name}-libjack < 0.3.13-6
+Conflicts:      %{name}-jack-audio-connection-kit < 0.3.13-6
+Obsoletes:      %{name}-jack-audio-connection-kit < 0.3.13-6
+ 
+%description libjack
+This package contains a PipeWire replacement for JACK audio connection kit
+"libjack" library.
+ 
+%package jack-audio-connection-kit
+Summary:        PipeWire JACK implementation
+License:        MIT
+Recommends:     %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-libjack%{?_isa} = %{version}-%{release}
+BuildRequires:  jack-audio-connection-kit-devel >= 1.9.10
+Conflicts:      jack-audio-connection-kit
+Conflicts:      jack-audio-connection-kit-dbus
+Conflicts:      %{name}-libjack < 0.3.13-6
+Conflicts:      %{name}-jack-audio-connection-kit < 0.3.13-6
+ 
+%description jack-audio-connection-kit
+This package provides a JACK implementation based on PipeWire
+ 
+%package plugin-jack
+Summary:        PipeWire media server JACK support
+License:        MIT
+BuildRequires:  jack-audio-connection-kit-devel
+Recommends:     %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
+Requires:       jack-audio-connection-kit
+ 
+%description plugin-jack
+This package contains the PipeWire spa plugin to connect to a JACK server.
+%endif
+
 %package          devel
 Summary:          includes development files for %{name} client development
 License:          LGPLv2+
@@ -48,6 +131,36 @@ Requires:         %{name} = %{version}-%{release}
 Files needed for building applications,such as static libraries,
 header files that can communicate with a %{name} media server.
 
+%if 0%{?enable_pulse}
+%package libpulse
+Summary:        PipeWire libpulse library
+License:        MIT
+Recommends:     %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
+BuildRequires:  pulseaudio-libs-devel
+Conflicts:      pulseaudio-libs
+Conflicts:      pulseaudio-libs-glib2
+Obsoletes:      pipewire-pulseaudio < 0.2.96-2
+Conflicts:      %{name}-libpulse < 0.3.13-6
+Conflicts:      %{name}-pulseaudio < 0.3.13-6
+Obsoletes:      %{name}-pulseaudio < 0.3.13-6
+ 
+%description libpulse
+This package contains a PipeWire replacement for PulseAudio "libpulse" library.
+ 
+%package pulseaudio
+Summary:        PipeWire PulseAudio implementation
+License:        MIT
+Recommends:     %{name}%{?_isa} = %{version}-%{release}
+Requires:       %{name}-libpulse%{?_isa} = %{version}-%{release}
+BuildRequires:  pulseaudio-libs-devel
+Conflicts:      %{name}-libpulse < 0.3.13-6
+Conflicts:      %{name}-pulseaudio < 0.3.13-6
+ 
+%description pulseaudio
+This package provides a PulseAudio implementation based on PipeWire
+%endif
+
 %package_help
 
 %prep
@@ -55,11 +168,41 @@ header files that can communicate with a %{name} media server.
 
 %build
 %meson -D docs=true -D man=true -D gstreamer=true -D systemd=true \
-	-D pipewire-pulseaudio=false
+        %{!?enable_jack:-D jack=false -D pipewire-jack=false} 	  \
+    	%{!?enable_pulse:-D pipewire-pulseaudio=false}			  \
+    	%{!?enable_alsa:-D pipewire-alsa=false}				      \
+    	%{!?enable_vulkan:-D vulkan=false}
 %meson_build
 
 %install
 %meson_install
+
+%if 0%{?enable_jack}
+mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjack.so.%{libversion} %{buildroot}%{_libdir}
+ln -sr %{buildroot}%{_libdir}/libjack.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjack.so.%{libversion}
+ln -s libjack.so.%{libversion} %{buildroot}%{_libdir}/libjack.so.0.1.0
+ln -s libjack.so.0.1.0 %{buildroot}%{_libdir}/libjack.so.0
+mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjackserver.so.%{libversion} %{buildroot}%{_libdir}
+ln -sr %{buildroot}%{_libdir}/libjackserver.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjackserver.so.%{libversion}
+ln -s libjackserver.so.%{libversion} %{buildroot}%{_libdir}/libjackserver.so.0.1.0
+ln -s libjackserver.so.0.1.0 %{buildroot}%{_libdir}/libjackserver.so.0
+mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjacknet.so.%{libversion} %{buildroot}%{_libdir}
+ln -sr %{buildroot}%{_libdir}/libjacknet.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjacknet.so.%{libversion}
+ln -s libjacknet.so.%{libversion} %{buildroot}%{_libdir}/libjacknet.so.0.1.0
+ln -s libjacknet.so.0.1.0 %{buildroot}%{_libdir}/libjacknet.so.0
+%endif
+	
+%if 0%{?enable_pulse}
+mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse.so.%{libversion} %{buildroot}%{_libdir}
+ln -sr %{buildroot}%{_libdir}/libpulse.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse.so.%{libversion}
+ln -s libpulse.so.%{libversion} %{buildroot}%{_libdir}/libpulse.so.0
+mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-simple.so.%{libversion} %{buildroot}%{_libdir}
+ln -sr %{buildroot}%{_libdir}/libpulse-simple.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-simple.so.%{libversion}
+ln -s libpulse-simple.so.%{libversion} %{buildroot}%{_libdir}/libpulse-simple.so.0
+mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-mainloop-glib.so.%{libversion} %{buildroot}%{_libdir}
+ln -sr %{buildroot}%{_libdir}/libpulse-mainloop-glib.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-mainloop-glib.so.%{libversion}
+ln -s libpulse-mainloop-glib.so.%{libversion} %{buildroot}%{_libdir}/libpulse-mainloop-glib.so.0
+%endif
 
 mkdir %{buildroot}%{_userunitdir}/sockets.target.wants
 ln -s ../pipewire.socket %{buildroot}%{_userunitdir}/sockets.target.wants/pipewire.socket
@@ -72,7 +215,6 @@ cp %{buildroot}%{_datadir}/alsa/alsa.conf.d/99-pipewire-default.conf \
 
 mkdir -p %{buildroot}%{_prefix}/lib/udev/rules.d
 mv -fv %{buildroot}/lib/udev/rules.d/90-pipewire-alsa.rules %{buildroot}%{_prefix}/lib/udev/rules.d
-
 
 %check
 %meson_test
@@ -88,13 +230,9 @@ exit 0
 %files
 %defattr(-,root,root)
 %license LICENSE COPYING
-%{_libdir}/gstreamer-1.0/libgstpipewire.*
 %{_libdir}/alsa-lib/libasound_module_*
-%{_bindir}/pipewire*
-%{_bindir}/pw-*
-%{_bindir}/spa-*
-%{_libdir}/pipewire-%{apiversion}/jack/
-%{_libdir}/spa-%{spaversion}/jack/
+%{_bindir}/pipewire	
+%{_bindir}/pipewire-media-session
 %{_userunitdir}/pipewire.*
 %{_userunitdir}/sockets.target.wants/pipewire.socket
 %dir %{_sysconfdir}/pipewire/
@@ -103,7 +241,6 @@ exit 0
 %{_datadir}/alsa/alsa.conf.d/99-pipewire-default.conf
 %config(noreplace) %{_sysconfdir}/alsa/conf.d/50-pipewire.conf
 %config(noreplace) %{_sysconfdir}/alsa/conf.d/99-pipewire-default.conf
-
 
 %files libs
 %defattr(-,root,root)	
@@ -128,6 +265,66 @@ exit 0
 %{_libdir}/spa-%{spaversion}/vulkan/
 %endif
 
+%files gstreamer
+%defattr(-,root,root)
+%{_libdir}/gstreamer-1.0/libgstpipewire.*
+
+%files utils
+%defattr(-,root,root)
+%{_bindir}/pw-mon
+%{_bindir}/pw-metadata
+%{_bindir}/pw-mididump
+%{_bindir}/pw-midiplay
+%{_bindir}/pw-midirecord
+%{_bindir}/pw-cli
+%{_bindir}/pw-dot
+%{_bindir}/pw-cat
+%{_bindir}/pw-play
+%{_bindir}/pw-profiler
+%{_bindir}/pw-record
+%{_bindir}/pw-reserve
+%{_mandir}/man1/pw-mon.1*
+%{_mandir}/man1/pw-cli.1*
+%{_mandir}/man1/pw-cat.1*
+%{_mandir}/man1/pw-dot.1*
+%{_mandir}/man1/pw-metadata.1*
+%{_mandir}/man1/pw-mididump.1*
+%{_mandir}/man1/pw-profiler.1*
+%{_bindir}/spa-acp-tool
+%{_bindir}/spa-inspect
+%{_bindir}/spa-monitor
+%{_bindir}/spa-resample
+
+%if 0%{?enable_alsa}
+%files alsa
+%defattr(-,root,root)
+%{_libdir}/alsa-lib/libasound_module_pcm_pipewire.so
+%{_libdir}/alsa-lib/libasound_module_ctl_pipewire.so
+%{_datadir}/alsa/alsa.conf.d/50-pipewire.conf
+%{_datadir}/alsa/alsa.conf.d/99-pipewire-default.conf
+%config(noreplace) %{_sysconfdir}/alsa/conf.d/50-pipewire.conf
+%config(noreplace) %{_sysconfdir}/alsa/conf.d/99-pipewire-default.conf
+%endif
+
+%if 0%{?enable_jack}
+%files jack-audio-connection-kit
+%defattr(-,root,root)
+%{_bindir}/pw-jack
+%{_mandir}/man1/pw-jack.1*
+%{_libdir}/pipewire-%{apiversion}/jack/libjack.so*
+%{_libdir}/pipewire-%{apiversion}/jack/libjacknet.so*
+%{_libdir}/pipewire-%{apiversion}/jack/libjackserver.so*
+ 
+%files libjack
+%defattr(-,root,root)
+%{_libdir}/libjack.so.*
+%{_libdir}/libjackserver.so.*
+%{_libdir}/libjacknet.so.*
+ 
+%files plugin-jack
+%defattr(-,root,root)
+%{_libdir}/spa-%{spaversion}/jack/
+%endif
 
 %files devel
 %defattr(-,root,root)
@@ -136,6 +333,22 @@ exit 0
 %{_libdir}/libpipewire-%{apiversion}.so
 %{_libdir}/pkgconfig/*.pc
 
+%if 0%{?enable_pulse}
+%files pulseaudio
+%defattr(-,root,root)
+%{_bindir}/pw-pulse
+%{_mandir}/man1/pw-pulse.1*
+%{_libdir}/pipewire-%{apiversion}/pulse/libpulse.so*
+%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-simple.so*
+%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-mainloop-glib.so*
+ 
+%files libpulse
+%defattr(-,root,root)
+%{_libdir}/libpulse.so.*
+%{_libdir}/libpulse-simple.so.*
+%{_libdir}/libpulse-mainloop-glib.so.*
+%endif
+
 %files help
 %defattr(-,root,root)
 %doc README.md
@@ -143,8 +356,10 @@ exit 0
 %{_mandir}/man5/*
 %{_datadir}/doc/pipewire/html/*
 
-
 %changelog
+* Sat Jul 31 2021 wangkerong <wangkerong@huawei.com> - 0.3.15-4
+- add alsa,gstreamer,libjack,libpulse... subpackages
+
 * Thu Jul 29 2021 wangkerong <wangkerong@huawei.com> - 0.3.15-3
 - add lib package
 
