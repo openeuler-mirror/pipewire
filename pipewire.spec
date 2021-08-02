@@ -7,15 +7,15 @@
 %global multilib_archs x86_64
 %global libversion   %{soversion}.%(bash -c '((intversion = (%{minorversion} * 100) + %{microversion})); echo ${intversion}').0
 %global enable_alsa 1
-%if 0%{?openEuler}	
-%global enable_jack   1
-%global enable_pulse  1
-%global enable_vulkan 1
-%endif
+
+%global enable_jack   0
+%global enable_pulse  0
+%global enable_vulkan 0
+
 
 Name:           pipewire
 Version:        0.3.15
-Release:        4
+Release:        5
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
@@ -168,10 +168,9 @@ This package provides a PulseAudio implementation based on PipeWire
 
 %build
 %meson -D docs=true -D man=true -D gstreamer=true -D systemd=true \
-        %{!?enable_jack:-D jack=false -D pipewire-jack=false} 	  \
-    	%{!?enable_pulse:-D pipewire-pulseaudio=false}			  \
-    	%{!?enable_alsa:-D pipewire-alsa=false}				      \
-    	%{!?enable_vulkan:-D vulkan=false}
+        -D jack=false -D pipewire-jack=false	  \
+    	-D pipewire-pulseaudio=false			  \
+        -D vulkan=false
 %meson_build
 
 %install
@@ -357,6 +356,9 @@ exit 0
 %{_datadir}/doc/pipewire/html/*
 
 %changelog
+* Mon Aug 2 2021 wangkerong <wangkerong@huawei.com> - 0.3.15-5
+- disable jack pulse vulkan subpackages
+
 * Sat Jul 31 2021 wangkerong <wangkerong@huawei.com> - 0.3.15-4
 - add alsa,gstreamer,libjack,libpulse... subpackages
 
