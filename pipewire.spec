@@ -15,7 +15,7 @@
 
 Name:           pipewire
 Version:        0.3.15
-Release:        5
+Release:        6
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
@@ -23,7 +23,7 @@ Source0:        https://github.com/pipewire/pipewire/archive/%{version}/%{name}-
 
 Patch0:         0001-protocol-native-do-version-check-on-HELLO.patch
 
-BuildRequires:  meson gcc pkgconf-pkg-config libudev-devel dbus-devel glib2-devel gstreamer-devel
+BuildRequires:  meson gcc pkgconf-pkg-config libudev-devel dbus-devel glib2-devel gstreamer1-devel
 BuildRequires:  gstreamer1-devel gstreamer1-plugins-base-devel systemd-devel vulkan-loader-devel
 BuildRequires:  alsa-lib-devel libv4l-devel doxygen xmltoman graphviz sbc-devel libsndfile-devel
 BuildRequires:  bluez-devel SDL2-devel jack-audio-connection-kit-devel
@@ -356,6 +356,9 @@ exit 0
 %{_datadir}/doc/pipewire/html/*
 
 %changelog
+* Sat Jan 08 2022 zhanzhimin <zhanzhimin@huawei.com> - 0.3.15-6
+- update gstreamer-devel to gstreamer1-devel
+
 * Mon Aug 2 2021 wangkerong <wangkerong@huawei.com> - 0.3.15-5
 - disable jack pulse vulkan subpackages
 
