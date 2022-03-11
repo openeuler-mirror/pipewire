@@ -15,7 +15,7 @@
 
 Name:           pipewire
 Version:        0.3.15
-Release:        6
+Release:        7
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
@@ -27,6 +27,8 @@ BuildRequires:  meson gcc pkgconf-pkg-config libudev-devel dbus-devel glib2-deve
 BuildRequires:  gstreamer1-devel gstreamer1-plugins-base-devel systemd-devel vulkan-loader-devel
 BuildRequires:  alsa-lib-devel libv4l-devel doxygen xmltoman graphviz sbc-devel libsndfile-devel
 BuildRequires:  bluez-devel SDL2-devel jack-audio-connection-kit-devel
+#remove rpath
+BuildRequires:  chrpath
 
 Requires(pre):  shadow-utils
 Requires:       systemd >= 184 rtkit
@@ -175,6 +177,9 @@ This package provides a PulseAudio implementation based on PipeWire
 
 %install
 %meson_install
+
+#remove rpath
+chrpath -d %{buildroot}%{_libdir}/pipewire-%{apiversion}/libpipewire-*.so
 
 %if 0%{?enable_jack}
 mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjack.so.%{libversion} %{buildroot}%{_libdir}
@@ -356,6 +361,12 @@ exit 0
 %{_datadir}/doc/pipewire/html/*
 
 %changelog
+* Wed Mar 9 2022 yangcheng<yangcheng87@h-partners.com> - 0.3.15-7
+- Type:bugfix
+- Id:NA
+- SUG:NA
+- DESC:fix rpath compile option
+
 * Sat Jan 08 2022 zhanzhimin <zhanzhimin@huawei.com> - 0.3.15-6
 - update gstreamer-devel to gstreamer1-devel
 
