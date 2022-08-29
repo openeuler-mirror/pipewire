@@ -14,7 +14,7 @@
 
 Name:           pipewire
 Version:        0.3.38
-Release:        1
+Release:        2
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
@@ -27,6 +27,9 @@ BuildRequires:  gstreamer1-devel gstreamer1-plugins-base-devel systemd-devel vul
 BuildRequires:  alsa-lib-devel libv4l-devel doxygen xmltoman graphviz sbc-devel libsndfile-devel
 BuildRequires:  bluez-devel SDL2-devel jack-audio-connection-kit-devel python3-docutils
 BuildRequires:  webrtc-audio-processing-devel libldac-devel libusbx-devel
+%ifarch riscv64
+BuildRequires:  avahi-devel readline-devel ncurses-devel
+%endif
 
 Requires(pre):  shadow-utils
 Requires:       systemd >= 184 rtkit
@@ -292,6 +295,10 @@ systemctl --no-reload preset --global pipewire.socket >/dev/null 2>&1 || :
 %{_bindir}/pw-profiler
 %{_bindir}/pw-record
 %{_bindir}/pw-reserve
+%ifarch riscv64
+%{_bindir}/pw-cli
+%{_bindir}/pw-top
+%endif
 %{_mandir}/man1/pw-mon.1*
 %{_mandir}/man1/pw-cat.1*
 %{_mandir}/man1/pw-cli.1*
@@ -369,6 +376,11 @@ systemctl --no-reload preset --global pipewire.socket >/dev/null 2>&1 || :
 %{_datadir}/doc/pipewire/html/*
 
 %changelog
+* Mon Aug 29 2022 jchzhou <jchzhou@outlook.com> - 0.3.38-2
+- Add riscv64-specific fixes
+- Author: @geasscore
+- URL: gitee.com/geasscore/pipewire/commit/b16bdf20af2def55e3d1ff123853a7f4110ac634
+
 * Mon Jun 20 2022 wenlong ding <wenlong.ding@turbolinux.com.cn> - 0.3.38-1
 - Update version to 0.3.38
 
