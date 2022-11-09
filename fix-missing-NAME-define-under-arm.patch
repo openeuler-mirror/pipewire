@@ -1,0 +1,12 @@
+diff -up pipewire-0.3.38/spa/plugins/support/cpu-arm.c.bak pipewire-0.3.38/spa/plugins/support/cpu-arm.c
+--- pipewire-0.3.38/spa/plugins/support/cpu-arm.c.bak	2022-06-20 09:43:01.381000000 +0000
++++ pipewire-0.3.38/spa/plugins/support/cpu-arm.c	2022-06-20 09:42:41.645000000 +0000
+@@ -28,6 +28,8 @@
+ 
+ #include <spa/utils/string.h>
+ 
++#define NAME "cpu-arm"
++
+ #define MAX_BUFFER 4096
+ 
+ static char *get_cpuinfo_line(char *cpuinfo, const char *tag)
