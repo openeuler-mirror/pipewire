@@ -2,7 +2,7 @@
 %global spaversion   0.2
 %global systemd      1
 %global minorversion 3
-%global microversion 15
+%global microversion 38
 %global soversion    0
 %global multilib_archs x86_64
 %global libversion   %{soversion}.%(bash -c '((intversion = (%{minorversion} * 100) + %{microversion})); echo ${intversion}').0
@@ -12,23 +12,23 @@
 %global enable_pulse  0
 %global enable_vulkan 0
 
-
 Name:           pipewire
-Version:        0.3.15
-Release:        7
+Version:        0.3.38
+Release:        1
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
 Source0:        https://github.com/pipewire/pipewire/archive/%{version}/%{name}-%{version}.tar.gz
+Patch01:	fix-bug-of-build-fails-on-16-17-test-support.patch
+Patch02:	fix-missing-NAME-define-under-arm.patch
 
-Patch0:         0001-protocol-native-do-version-check-on-HELLO.patch
-
-BuildRequires:  meson gcc pkgconf-pkg-config libudev-devel dbus-devel glib2-devel gstreamer1-devel
+BuildRequires:  meson gcc g++ pkgconf-pkg-config libudev-devel dbus-devel glib2-devel pipewire-gstreamer
 BuildRequires:  gstreamer1-devel gstreamer1-plugins-base-devel systemd-devel vulkan-loader-devel
 BuildRequires:  alsa-lib-devel libv4l-devel doxygen xmltoman graphviz sbc-devel libsndfile-devel
-BuildRequires:  bluez-devel SDL2-devel jack-audio-connection-kit-devel
+BuildRequires:  bluez-devel SDL2-devel jack-audio-connection-kit-devel python3-docutils
+BuildRequires:  webrtc-audio-processing-devel libldac-devel libusbx-devel
 #remove rpath
-BuildRequires:  chrpath
+BuildRequires:	chrpath
 
 Requires(pre):  shadow-utils
 Requires:       systemd >= 184 rtkit
@@ -68,7 +68,7 @@ Requires:       %{name}-libs%{?_isa} = %{version}-%{release}
  
 %description utils
 This package contains command line utilities for the PipeWire media server.
-	
+
 %if 0%{?enable_alsa}
 %package alsa
 Summary:        PipeWire media server ALSA support
@@ -169,10 +169,14 @@ This package provides a PulseAudio implementation based on PipeWire
 %autosetup -T -b0 -n %{name}-%{version} -p1
 
 %build
-%meson -D docs=true -D man=true -D gstreamer=true -D systemd=true \
-        -D jack=false -D pipewire-jack=false	  \
-    	-D pipewire-pulseaudio=false			  \
-        -D vulkan=false
+%meson \
+    -D docs=enabled -D man=enabled -D gstreamer=enabled -D systemd=enabled	\
+    -D jack=disabled -D pipewire-jack=disabled 					\
+    -D vulkan=disabled -D gstreamer-device-provider=disabled -D sdl2=disabled 	\
+    -D audiotestsrc=disabled -D videotestsrc=disabled				\
+    -D volume=disabled -D bluez5-codec-aptx=disabled -D roc=disabled		\
+    -D libcamera=disabled -D jack-devel=true -D pipewire-alsa=disabled		\
+    -D bluez5-codec-aac=disabled -D echo-cancel-webrtc=disabled
 %meson_build
 
 %install
@@ -182,46 +186,42 @@ This package provides a PulseAudio implementation based on PipeWire
 chrpath -d %{buildroot}%{_libdir}/pipewire-%{apiversion}/libpipewire-*.so
 
 %if 0%{?enable_jack}
-mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjack.so.%{libversion} %{buildroot}%{_libdir}
-ln -sr %{buildroot}%{_libdir}/libjack.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjack.so.%{libversion}
-ln -s libjack.so.%{libversion} %{buildroot}%{_libdir}/libjack.so.0.1.0
-ln -s libjack.so.0.1.0 %{buildroot}%{_libdir}/libjack.so.0
-mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjackserver.so.%{libversion} %{buildroot}%{_libdir}
-ln -sr %{buildroot}%{_libdir}/libjackserver.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjackserver.so.%{libversion}
-ln -s libjackserver.so.%{libversion} %{buildroot}%{_libdir}/libjackserver.so.0.1.0
-ln -s libjackserver.so.0.1.0 %{buildroot}%{_libdir}/libjackserver.so.0
-mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjacknet.so.%{libversion} %{buildroot}%{_libdir}
-ln -sr %{buildroot}%{_libdir}/libjacknet.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/jack/libjacknet.so.%{libversion}
-ln -s libjacknet.so.%{libversion} %{buildroot}%{_libdir}/libjacknet.so.0.1.0
-ln -s libjacknet.so.0.1.0 %{buildroot}%{_libdir}/libjacknet.so.0
-%endif
-	
-%if 0%{?enable_pulse}
-mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse.so.%{libversion} %{buildroot}%{_libdir}
-ln -sr %{buildroot}%{_libdir}/libpulse.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse.so.%{libversion}
-ln -s libpulse.so.%{libversion} %{buildroot}%{_libdir}/libpulse.so.0
-mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-simple.so.%{libversion} %{buildroot}%{_libdir}
-ln -sr %{buildroot}%{_libdir}/libpulse-simple.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-simple.so.%{libversion}
-ln -s libpulse-simple.so.%{libversion} %{buildroot}%{_libdir}/libpulse-simple.so.0
-mv %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-mainloop-glib.so.%{libversion} %{buildroot}%{_libdir}
-ln -sr %{buildroot}%{_libdir}/libpulse-mainloop-glib.so.%{libversion} %{buildroot}%{_libdir}/pipewire-%{apiversion}/pulse/libpulse-mainloop-glib.so.%{libversion}
-ln -s libpulse-mainloop-glib.so.%{libversion} %{buildroot}%{_libdir}/libpulse-mainloop-glib.so.0
+mkdir -p %{buildroot}%{_sysconfdir}/ld.so.conf.d/
+echo %{_libdir}/pipewire-%{apiversion}/jack/ > %{buildroot}%{_sysconfdir}/ld.so.conf.d/pipewire-jack-%{_arch}.conf
+%else
+rm %{buildroot}%{_datadir}/pipewire/jack.conf
+rm %{buildroot}%{_datadir}/pipewire/media-session.d/with-jack
 %endif
 
-mkdir %{buildroot}%{_userunitdir}/sockets.target.wants
-ln -s ../pipewire.socket %{buildroot}%{_userunitdir}/sockets.target.wants/pipewire.socket
+# If the PulseAudio replacement isn't being offered, delete the files
+rm %{buildroot}%{_bindir}/pipewire-pulse
+rm %{buildroot}%{_userunitdir}/pipewire-pulse.*
+rm %{buildroot}%{_datadir}/pipewire/media-session.d/with-pulseaudio
+rm %{buildroot}%{_datadir}/pipewire/pipewire-pulse.conf
 
-mkdir -p %{buildroot}%{_sysconfdir}/alsa/conf.d/
-cp %{buildroot}%{_datadir}/alsa/alsa.conf.d/50-pipewire.conf \
-        %{buildroot}%{_sysconfdir}/alsa/conf.d/50-pipewire.conf
-cp %{buildroot}%{_datadir}/alsa/alsa.conf.d/99-pipewire-default.conf \
-        %{buildroot}%{_sysconfdir}/alsa/conf.d/99-pipewire-default.conf
+# rm media_session related
+rm %{buildroot}%{_datadir}/pipewire/media-session.d/alsa-monitor.conf
+rm %{buildroot}%{_datadir}/pipewire/media-session.d/bluez-monitor.conf
+rm %{buildroot}%{_datadir}/pipewire/media-session.d/media-session.conf
+rm %{buildroot}%{_datadir}/pipewire/media-session.d/v4l2-monitor.conf
+rm %{buildroot}%{_datadir}/spa-0.2/bluez5/bluez-hardware.conf
 
+# We don't start the media session with systemd yet
+rm %{buildroot}%{_userunitdir}/pipewire-media-session.*
+
+%find_lang %{name}
+
+# upstream should use udev.pc
 mkdir -p %{buildroot}%{_prefix}/lib/udev/rules.d
 mv -fv %{buildroot}/lib/udev/rules.d/90-pipewire-alsa.rules %{buildroot}%{_prefix}/lib/udev/rules.d
 
+
 %check
-%meson_test
+%meson_test || TESTS_ERROR=$?
+if [ "${TESTS_ERROR}" != "" ]; then
+echo "test failed"
+%{!?tests_nonfatal:exit $TESTS_ERROR}
+fi
 
 %pre
 getent group pipewire >/dev/null || groupadd -r pipewire
@@ -229,7 +229,21 @@ getent passwd pipewire >/dev/null || \
     useradd -r -g pipewire -d %{_localstatedir}/run/pipewire -s /sbin/nologin -c "PipeWire System Daemon" pipewire
 exit 0
 
-%ldconfig_scriptlets
+%post
+%systemd_user_post pipewire.service
+%systemd_user_post pipewire.socket
+
+%triggerun -- %{name} < 0.3.6-2
+# This is for upgrades from previous versions which had a static symlink.
+# The %%post scriptlet above only does anything on initial package installation.
+# Remove before F33.
+systemctl --no-reload preset --global pipewire.socket >/dev/null 2>&1 || :
+
+%if 0%{?enable_pulse}
+%post pulseaudio
+%systemd_user_post pipewire-pulse.service
+%systemd_user_post pipewire-pulse.socket
+%endif
 
 %files
 %defattr(-,root,root)
@@ -238,15 +252,10 @@ exit 0
 %{_bindir}/pipewire	
 %{_bindir}/pipewire-media-session
 %{_userunitdir}/pipewire.*
-%{_userunitdir}/sockets.target.wants/pipewire.socket
-%dir %{_sysconfdir}/pipewire/
-%{_sysconfdir}/pipewire/*
-%{_datadir}/alsa/alsa.conf.d/50-pipewire.conf
-%{_datadir}/alsa/alsa.conf.d/99-pipewire-default.conf
-%config(noreplace) %{_sysconfdir}/alsa/conf.d/50-pipewire.conf
-%config(noreplace) %{_sysconfdir}/alsa/conf.d/99-pipewire-default.conf
+%{_datadir}/pipewire/pipewire.conf
+%{_datadir}/pipewire/filter-chain/*.conf
 
-%files libs
+%files libs -f %{name}.lang
 %defattr(-,root,root)	
 %license LICENSE COPYING
 %{_libdir}/libpipewire-%{apiversion}.so.*
@@ -268,6 +277,8 @@ exit 0
 %if 0%{?enable_vulkan}
 %{_libdir}/spa-%{spaversion}/vulkan/
 %endif
+%{_datadir}/pipewire/client.conf
+%{_datadir}/pipewire/client-rt.conf
 
 %files gstreamer
 %defattr(-,root,root)
@@ -280,7 +291,6 @@ exit 0
 %{_bindir}/pw-mididump
 %{_bindir}/pw-midiplay
 %{_bindir}/pw-midirecord
-%{_bindir}/pw-cli
 %{_bindir}/pw-dot
 %{_bindir}/pw-cat
 %{_bindir}/pw-play
@@ -288,8 +298,8 @@ exit 0
 %{_bindir}/pw-record
 %{_bindir}/pw-reserve
 %{_mandir}/man1/pw-mon.1*
-%{_mandir}/man1/pw-cli.1*
 %{_mandir}/man1/pw-cat.1*
+%{_mandir}/man1/pw-cli.1*
 %{_mandir}/man1/pw-dot.1*
 %{_mandir}/man1/pw-metadata.1*
 %{_mandir}/man1/pw-mididump.1*
@@ -298,6 +308,11 @@ exit 0
 %{_bindir}/spa-inspect
 %{_bindir}/spa-monitor
 %{_bindir}/spa-resample
+%{_bindir}/pw-dsdplay
+%{_bindir}/pw-dump
+%{_bindir}/pw-link
+%{_bindir}/pw-loopback
+%{_bindir}/spa-json-dump
 
 %if 0%{?enable_alsa}
 %files alsa
@@ -306,8 +321,6 @@ exit 0
 %{_libdir}/alsa-lib/libasound_module_ctl_pipewire.so
 %{_datadir}/alsa/alsa.conf.d/50-pipewire.conf
 %{_datadir}/alsa/alsa.conf.d/99-pipewire-default.conf
-%config(noreplace) %{_sysconfdir}/alsa/conf.d/50-pipewire.conf
-%config(noreplace) %{_sysconfdir}/alsa/conf.d/99-pipewire-default.conf
 %endif
 
 %if 0%{?enable_jack}
@@ -318,7 +331,7 @@ exit 0
 %{_libdir}/pipewire-%{apiversion}/jack/libjack.so*
 %{_libdir}/pipewire-%{apiversion}/jack/libjacknet.so*
 %{_libdir}/pipewire-%{apiversion}/jack/libjackserver.so*
- 
+
 %files libjack
 %defattr(-,root,root)
 %{_libdir}/libjack.so.*
@@ -345,7 +358,7 @@ exit 0
 %{_libdir}/pipewire-%{apiversion}/pulse/libpulse.so*
 %{_libdir}/pipewire-%{apiversion}/pulse/libpulse-simple.so*
 %{_libdir}/pipewire-%{apiversion}/pulse/libpulse-mainloop-glib.so*
- 
+
 %files libpulse
 %defattr(-,root,root)
 %{_libdir}/libpulse.so.*
@@ -361,6 +374,9 @@ exit 0
 %{_datadir}/doc/pipewire/html/*
 
 %changelog
+* Wed Nov 09 2022 zhouwenpei <zhouwenpei1@h-partners.com> - 0.3.38-1
+- sync master update version to 0.3.38
+
 * Wed Mar 9 2022 yangcheng<yangcheng87@h-partners.com> - 0.3.15-7
 - Type:bugfix
 - Id:NA
