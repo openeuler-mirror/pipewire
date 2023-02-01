@@ -2,7 +2,7 @@
 %global spaversion   0.2
 %global systemd      1
 %global minorversion 3
-%global microversion 38
+%global microversion 63
 %global soversion    0
 %global multilib_archs x86_64
 %global libversion   %{soversion}.%(bash -c '((intversion = (%{minorversion} * 100) + %{microversion})); echo ${intversion}').0
@@ -13,20 +13,21 @@
 %global enable_vulkan 0
 
 Name:           pipewire
-Version:        0.3.38
-Release:        2
+Version:        0.3.63
+Release:        1
 Summary:        Multimedia processing graphs
 License:        LGPLv2+
 URL:            https://pipewire.org/
 Source0:        https://github.com/pipewire/pipewire/archive/%{version}/%{name}-%{version}.tar.gz
-Patch01:	fix-bug-of-build-fails-on-16-17-test-support.patch
-Patch02:	fix-missing-NAME-define-under-arm.patch
+#Patch01:	fix-bug-of-build-fails-on-16-17-test-support.patch
+#Patch02:	fix-missing-NAME-define-under-arm.patch
 
-BuildRequires:  meson gcc g++ pkgconf-pkg-config libudev-devel dbus-devel glib2-devel pipewire-gstreamer
-BuildRequires:  gstreamer1-devel gstreamer1-plugins-base-devel systemd-devel vulkan-loader-devel
+BuildRequires:  meson gcc g++ pkgconf-pkg-config libudev-devel dbus-devel glib2-devel >= 2.32 pipewire-gstreamer
+BuildRequires:  gstreamer1-devel >= 1.10.0 gstreamer1-plugins-base-devel >= 1.10.0 systemd-devel vulkan-loader-devel
 BuildRequires:  alsa-lib-devel libv4l-devel doxygen xmltoman graphviz sbc-devel libsndfile-devel
 BuildRequires:  bluez-devel SDL2-devel jack-audio-connection-kit-devel python3-docutils
-BuildRequires:  webrtc-audio-processing-devel libldac-devel libusbx-devel
+BuildRequires:  webrtc-audio-processing-devel >= 0.2 libldac-devel libusbx-devel
+BuildRequires:  readline-devel libcanberra-devel lilv-devel
 #remove rpath
 BuildRequires:	chrpath
 
@@ -176,7 +177,9 @@ This package provides a PulseAudio implementation based on PipeWire
     -D audiotestsrc=disabled -D videotestsrc=disabled				\
     -D volume=disabled -D bluez5-codec-aptx=disabled -D roc=disabled		\
     -D libcamera=disabled -D jack-devel=true -D pipewire-alsa=disabled		\
-    -D bluez5-codec-aac=disabled -D echo-cancel-webrtc=disabled
+    -D bluez5-codec-aac=disabled -D echo-cancel-webrtc=disabled  \
+    -D bluez5-codec-lc3plus=disabled -D bluez5-codec-opus=disabled \
+    -D session-managers=[]
 %meson_build
 
 %install
@@ -190,24 +193,24 @@ mkdir -p %{buildroot}%{_sysconfdir}/ld.so.conf.d/
 echo %{_libdir}/pipewire-%{apiversion}/jack/ > %{buildroot}%{_sysconfdir}/ld.so.conf.d/pipewire-jack-%{_arch}.conf
 %else
 rm %{buildroot}%{_datadir}/pipewire/jack.conf
-rm %{buildroot}%{_datadir}/pipewire/media-session.d/with-jack
+#rm %{buildroot}%{_datadir}/pipewire/media-session.d/with-jack
 %endif
 
 # If the PulseAudio replacement isn't being offered, delete the files
 rm %{buildroot}%{_bindir}/pipewire-pulse
 rm %{buildroot}%{_userunitdir}/pipewire-pulse.*
-rm %{buildroot}%{_datadir}/pipewire/media-session.d/with-pulseaudio
+#rm %{buildroot}%{_datadir}/pipewire/media-session.d/with-pulseaudio
 rm %{buildroot}%{_datadir}/pipewire/pipewire-pulse.conf
 
 # rm media_session related
-rm %{buildroot}%{_datadir}/pipewire/media-session.d/alsa-monitor.conf
-rm %{buildroot}%{_datadir}/pipewire/media-session.d/bluez-monitor.conf
-rm %{buildroot}%{_datadir}/pipewire/media-session.d/media-session.conf
-rm %{buildroot}%{_datadir}/pipewire/media-session.d/v4l2-monitor.conf
+#rm %{buildroot}%{_datadir}/pipewire/media-session.d/alsa-monitor.conf
+#rm %{buildroot}%{_datadir}/pipewire/media-session.d/bluez-monitor.conf
+#rm %{buildroot}%{_datadir}/pipewire/media-session.d/media-session.conf
+#rm %{buildroot}%{_datadir}/pipewire/media-session.d/v4l2-monitor.conf
 rm %{buildroot}%{_datadir}/spa-0.2/bluez5/bluez-hardware.conf
 
 # We don't start the media session with systemd yet
-rm %{buildroot}%{_userunitdir}/pipewire-media-session.*
+#rm %{buildroot}%{_userunitdir}/pipewire-media-session.*
 
 %find_lang %{name}
 
@@ -250,16 +253,21 @@ systemctl --no-reload preset --global pipewire.socket >/dev/null 2>&1 || :
 %license LICENSE COPYING
 %{_libdir}/alsa-lib/libasound_module_*
 %{_bindir}/pipewire	
-%{_bindir}/pipewire-media-session
+#%%{_bindir}/pipewire-media-session
 %{_userunitdir}/pipewire.*
+%{_userunitdir}/filter-chain.service
 %{_datadir}/pipewire/pipewire.conf
 %{_datadir}/pipewire/filter-chain/*.conf
+%{_datadir}/pipewire/filter-chain.conf
+%{_datadir}/pipewire/minimal.conf
+%{_datadir}/pipewire/pipewire-avb.conf
 
 %files libs -f %{name}.lang
 %defattr(-,root,root)	
 %license LICENSE COPYING
 %{_libdir}/libpipewire-%{apiversion}.so.*
 %{_libdir}/pipewire-%{apiversion}/libpipewire-*.so
+%{_libdir}/pipewire-%{apiversion}/v4l2/
 %dir %{_datadir}/alsa-card-profile/
 %dir %{_datadir}/alsa-card-profile/mixer/
 %{_datadir}/alsa-card-profile/mixer/paths/
@@ -274,6 +282,9 @@ systemctl --no-reload preset --global pipewire.socket >/dev/null 2>&1 || :
 %{_libdir}/spa-%{spaversion}/support/
 %{_libdir}/spa-%{spaversion}/v4l2/
 %{_libdir}/spa-%{spaversion}/videoconvert/	
+%{_libdir}/spa-%{spaversion}/aec/
+%{_libdir}/spa-%{spaversion}/avb/
+
 %if 0%{?enable_vulkan}
 %{_libdir}/spa-%{spaversion}/vulkan/
 %endif
@@ -313,6 +324,10 @@ systemctl --no-reload preset --global pipewire.socket >/dev/null 2>&1 || :
 %{_bindir}/pw-link
 %{_bindir}/pw-loopback
 %{_bindir}/spa-json-dump
+%{_bindir}/pipewire-avb
+%{_bindir}/pw-cli
+%{_bindir}/pw-top
+%{_bindir}/pw-v4l2
 
 %if 0%{?enable_alsa}
 %files alsa
@@ -374,6 +389,9 @@ systemctl --no-reload preset --global pipewire.socket >/dev/null 2>&1 || :
 %{_datadir}/doc/pipewire/html/*
 
 %changelog
+* Mon Jan 02 2023 lin zhang <lin.zhang@turbolinux.com.cn> - 0.3.63-1
+- update version to 0.3.63
+
 * Tue Sep 13 2022 zhouwenpei <zhouwenpei1@h-partners.com> - 0.3.38-2
 - fix rpath compile option
 
